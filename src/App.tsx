@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Customer, Loan, Transaction, InstallmentSchedule, LoanStatus } from './types';
+import { Customer, Loan, Transaction, InstallmentSchedule, LoanStatus, PawnshopSettings, PaymentTerm } from './types';
 import { 
   SAMPLE_CUSTOMERS, 
   SAMPLE_LOANS, 
@@ -19,6 +19,7 @@ import LoanWizard from './components/LoanWizard';
 import LoanDetails from './components/LoanDetails';
 import Transactions from './components/Transactions';
 import BackupRestore from './components/BackupRestore';
+import Settings from './components/Settings';
 
 // Lucide Icons
 import { 
@@ -34,20 +35,35 @@ import {
   Menu,
   X,
   Sparkles,
-  Search
+  Search,
+  Settings as SettingsIcon
 } from 'lucide-react';
+
+const DEFAULT_SETTINGS: PawnshopSettings = {
+  businessName: 'V4U Pawn Group',
+  businessSlogan: 'ប្រព័ន្ធគ្រប់គ្រងហាងបញ្ចាំ កម្ចី និងរំលស់',
+  businessPhone: '012 345 678 / 098 765 432',
+  businessAddress: 'ផ្លូវលេខ ២៧១, សង្កាត់បឹងសាឡាង, ភ្នំពេញ',
+  defaultInterestRate: 2.0,
+  defaultPenaltyRate: 1.0,
+  defaultAdminFee: 5.0,
+  defaultPaymentTerm: PaymentTerm.MONTHLY,
+  accentColor: 'yellow',
+  language: 'kh'
+};
 
 export default function App() {
   // 1. Persistent Storage State Management
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loans, setLoans] = useState<Loan[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [settings, setSettings] = useState<PawnshopSettings>(DEFAULT_SETTINGS);
   
   // Global search bar query
   const [globalSearchQuery, setGlobalSearchQuery] = useState('');
   
   // Navigation active tab State
-  // Values: 'dashboard', 'customers', 'loans', 'loans_new', 'transactions', 'backup'
+  // Values: 'dashboard', 'customers', 'loans', 'loans_new', 'transactions', 'backup', 'settings'
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [selectedLoanId, setSelectedLoanId] = useState<string | null>(null);
   const [targetCustomerIdForNewLoan, setTargetCustomerIdForNewLoan] = useState<string | undefined>(undefined);
@@ -63,6 +79,13 @@ export default function App() {
     const localCustomers = localStorage.getItem('pawnshop_customers');
     const localLoans = localStorage.getItem('pawnshop_loans');
     const localTransactions = localStorage.getItem('pawnshop_transactions');
+    const localSettings = localStorage.getItem('pawnshop_settings');
+
+    if (localSettings) {
+      setSettings(JSON.parse(localSettings));
+    } else {
+      localStorage.setItem('pawnshop_settings', JSON.stringify(DEFAULT_SETTINGS));
+    }
 
     if (localCustomers && localLoans && localTransactions) {
       setCustomers(JSON.parse(localCustomers));
@@ -174,6 +197,30 @@ export default function App() {
     saveStateToLocalStorage([], [], []);
   };
 
+  const handleSaveSettings = (newSettings: PawnshopSettings) => {
+    localStorage.setItem('pawnshop_settings', JSON.stringify(newSettings));
+    setSettings(newSettings);
+  };
+
+  const handleResetSettings = () => {
+    localStorage.setItem('pawnshop_settings', JSON.stringify(DEFAULT_SETTINGS));
+    setSettings(DEFAULT_SETTINGS);
+  };
+
+  const accent = settings.accentColor === 'indigo' ? {
+    text: 'text-indigo-500', bg: 'bg-indigo-600', activeBtn: 'bg-indigo-600 text-white shadow-md shadow-indigo-600/10', activeIcon: 'text-white', textActive: 'text-slate-200'
+  } : settings.accentColor === 'emerald' ? {
+    text: 'text-emerald-500', bg: 'bg-emerald-500', activeBtn: 'bg-emerald-500 text-white shadow-md shadow-emerald-500/10', activeIcon: 'text-white', textActive: 'text-slate-200'
+  } : settings.accentColor === 'violet' ? {
+    text: 'text-violet-600', bg: 'bg-violet-600', activeBtn: 'bg-violet-600 text-white shadow-md shadow-violet-600/10', activeIcon: 'text-white', textActive: 'text-slate-200'
+  } : settings.accentColor === 'rose' ? {
+    text: 'text-rose-500', bg: 'bg-rose-500', activeBtn: 'bg-rose-500 text-white shadow-md shadow-rose-500/10', activeIcon: 'text-white', textActive: 'text-slate-200'
+  } : settings.accentColor === 'slate' ? {
+    text: 'text-slate-400', bg: 'bg-slate-700', activeBtn: 'bg-slate-700 text-white shadow-md shadow-slate-700/10', activeIcon: 'text-white', textActive: 'text-slate-200'
+  } : {
+    text: 'text-yellow-500', bg: 'bg-yellow-500', activeBtn: 'bg-yellow-500 text-slate-950 shadow-md shadow-yellow-500/10', activeIcon: 'text-slate-950', textActive: 'text-slate-800'
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row" id="app_root">
       
@@ -184,16 +231,18 @@ export default function App() {
         {/* Sidebar Header branding */}
         <div className="p-6 border-b border-slate-800 space-y-3 relative">
           <div className="flex items-center gap-2">
-            <Coins className="w-8 h-8 text-yellow-500 bg-yellow-400/10 p-1.5 rounded-xl border border-yellow-500/20 shadow-xs" />
+            <Coins className={`w-8 h-8 ${accent.text} bg-yellow-400/10 p-1.5 rounded-xl border border-yellow-500/20 shadow-xs`} />
             <div className="space-y-0.5">
-              <span className="font-extrabold text-[12px] bg-yellow-500 text-slate-950 px-1.5 py-0.2 rounded-xs tracking-wider uppercase">V4U Pawn</span>
+              <span className={`font-extrabold text-[12px] ${accent.bg} ${settings.accentColor === 'yellow' ? 'text-slate-950' : 'text-white'} px-1.5 py-0.2 rounded-xs tracking-wider uppercase`}>
+                {settings.businessName.substring(0, 12)}
+              </span>
               <p className="font-semibold text-slate-300 text-[10px] font-mono leading-none">PAWNSHOP SUITE</p>
             </div>
           </div>
-          <h1 className="moul-heading text-yellow-500 text-xs tracking-wide leading-relaxed">
-            ប្រព័ន្ធហាងបញ្ចាំ និងកម្ចី
+          <h1 className={`moul-heading ${accent.text} text-xs tracking-wide leading-relaxed`}>
+            {settings.businessName}
           </h1>
-          <p className="text-[10px] text-slate-400 font-sans">កម្ចី បញ្ចាំ និងបង់រំលស់គ្រប់ប្រភេទ</p>
+          <p className="text-[10px] text-slate-400 font-sans">{settings.businessSlogan || 'កម្ចី បញ្ចាំ និងបង់រំលស់គ្រប់ប្រភេទ'}</p>
 
           {/* Close drawer on mobile */}
           <button 
@@ -213,6 +262,7 @@ export default function App() {
             { id: 'loans_new', label: 'បង្កើតកិច្ចសន្យាថ្មី', desc: 'Create New Contract', icon: PlusCircle },
             { id: 'transactions', label: 'ប្រវត្តិវិក្កយបត្រទទួលប្រាក់', desc: 'Payment Transactions', icon: History },
             { id: 'backup', label: 'របាយការណ៍ និងទិន្នន័យ', desc: 'Database & Backups', icon: Database },
+            { id: 'settings', label: 'ការកំណត់ប្រព័ន្ធ', desc: 'System Settings', icon: SettingsIcon },
           ].map(item => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
@@ -223,14 +273,14 @@ export default function App() {
                 onClick={() => handleNavigate(item.id)}
                 className={`w-full p-3 rounded-xl flex items-center gap-3.5 text-left transition-all ${
                   isActive 
-                    ? 'bg-yellow-500 text-slate-950 shadow-md shadow-yellow-500/10' 
+                    ? accent.activeBtn 
                     : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
                 }`}
               >
-                <Icon className={`w-5 h-5 shrink-0 ${isActive ? 'text-slate-950' : 'text-slate-400'}`} />
+                <Icon className={`w-5 h-5 shrink-0 ${isActive ? accent.activeIcon : 'text-slate-400'}`} />
                 <div className="space-y-0.5">
                   <div className="text-xs font-bold leading-none">{item.label}</div>
-                  <div className={`text-[10px] font-normal tracking-wide ${isActive ? 'text-slate-800' : 'text-slate-500 font-mono'}`}>{item.desc}</div>
+                  <div className={`text-[10px] font-normal tracking-wide ${isActive ? accent.textActive : 'text-slate-500 font-mono'}`}>{item.desc}</div>
                 </div>
               </button>
             );
@@ -240,7 +290,7 @@ export default function App() {
         {/* Sidebar Footer context summary */}
         <div className="p-4 border-t border-slate-800 space-y-2 bg-slate-950/20 text-[10px] text-slate-500">
           <div className="flex items-center gap-2 text-slate-400">
-            <Shield className="w-3.5 h-3.5 text-yellow-500" />
+            <Shield className={`w-3.5 h-3.5 ${accent.text}`} />
             <span className="font-bold">ប្រព័ន្ធសុវត្ថិភាពខ្ពស់ (Local Safe)</span>
           </div>
           <p className="leading-relaxed">រាល់ទិន្នន័យទាំងអស់ត្រូវបានរក្សាទុកនៅលើដ្រាយវ៍របស់អ្នកជាលក្ខណៈសម្ងាត់បំផុត គ្មានការលេចធ្លាយឡើយ។</p>
@@ -350,6 +400,7 @@ export default function App() {
               onAddLoan={handleAddLoan} 
               onAddCustomer={handleAddCustomer}
               onNavigate={handleNavigate} 
+              settings={settings}
             />
           )}
 
@@ -367,6 +418,14 @@ export default function App() {
               onImportData={handleImportSystemData} 
               onLoadSample={handleLoadSampleDataset} 
               onResetAll={handleResetCleanSlate} 
+            />
+          )}
+
+          {activeTab === 'settings' && (
+            <Settings 
+              settings={settings} 
+              onSaveSettings={handleSaveSettings} 
+              onResetSettings={handleResetSettings} 
             />
           )}
         </main>

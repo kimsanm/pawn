@@ -92,3 +92,17 @@ export interface Transaction {
   receiver: string;            // អ្នកទទួលប្រាក់/បុគ្គលិក
   notes?: string;
 }
+
+export interface PawnshopSettings {
+  businessName: string;
+  businessSlogan: string;
+  businessPhone: string;
+  businessAddress: string;
+  defaultInterestRate: number;      // % per month
+  defaultPenaltyRate: number;       // $ per day
+  defaultAdminFee: number;          // $ per contract
+  defaultPaymentTerm: PaymentTerm;  // DAILY, WEEKLY, MONTHLY
+  accentColor: string;              // hex or tailwind class name like 'yellow' | 'indigo' | 'emerald' etc.
+  language: 'kh' | 'en';
+}
+

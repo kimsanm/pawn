@@ -6,6 +6,8 @@
 import { Customer, Loan, LoanType, InterestType, PaymentTerm, LoanStatus, Transaction } from '../types';
 
 // Format currency beautifully ($ USD and KHR Riel)
+export const EXCHANGE_RATE_USD_TO_KHR = 4000;
+
 export const formatUSD = (amount: number): string => {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
@@ -16,11 +18,8 @@ export const formatUSD = (amount: number): string => {
 };
 
 export const formatKHR = (amount: number): string => {
-  return new Intl.NumberFormat('km-KH', {
-    style: 'currency',
-    currency: 'KHR',
-    minimumFractionDigits: 0,
-  }).format(amount).replace('KHR', '៛');
+  const rounded = Math.round(amount);
+  return new Intl.NumberFormat('en-US').format(rounded) + ' ៛';
 };
 
 // Simple Khmer date formatter

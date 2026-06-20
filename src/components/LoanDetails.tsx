@@ -5,7 +5,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Customer, Loan, LoanStatus, LoanType, Transaction, InstallmentSchedule } from '../types';
-import { formatUSD, formatKhmerDate } from '../utils/sampleData';
+import { formatUSD, formatKhmerDate, formatKHR, EXCHANGE_RATE_USD_TO_KHR } from '../utils/sampleData';
 import { 
   FileText, 
   Search, 
@@ -220,21 +220,33 @@ export default function LoanDetails({
               <div className="space-y-1.5 bg-slate-50/50 p-3 rounded-xl border border-slate-100">
                 <div className="flex justify-between text-slate-500">
                   <span>ប្រាក់ដើម (Principal Paid):</span>
-                  <span className="font-mono">{formatUSD(showReceiptPreview.paidPrincipal)}</span>
+                  <div className="text-right">
+                    <span className="font-mono block">{formatUSD(showReceiptPreview.paidPrincipal)}</span>
+                    <span className="text-[10px] text-slate-400 font-mono block">≈ {formatKHR(showReceiptPreview.paidPrincipal * EXCHANGE_RATE_USD_TO_KHR)}</span>
+                  </div>
                 </div>
                 <div className="flex justify-between text-slate-500">
                   <span>ការប្រាក់ (Interest Paid):</span>
-                  <span className="font-mono">{formatUSD(showReceiptPreview.paidInterest)}</span>
+                  <div className="text-right">
+                    <span className="font-mono block">{formatUSD(showReceiptPreview.paidInterest)}</span>
+                    <span className="text-[10px] text-slate-400 font-mono block">≈ {formatKHR(showReceiptPreview.paidInterest * EXCHANGE_RATE_USD_TO_KHR)}</span>
+                  </div>
                 </div>
                 {showReceiptPreview.penaltyFee > 0 && (
                   <div className="flex justify-between text-red-600 font-bold">
                     <span>ផាកពិន័យ/យឺតយ៉ាវ (Penalty fee):</span>
-                    <span className="font-mono">+{formatUSD(showReceiptPreview.penaltyFee)}</span>
+                    <div className="text-right">
+                      <span className="font-mono block">+{formatUSD(showReceiptPreview.penaltyFee)}</span>
+                      <span className="text-[10px] text-red-500 font-mono block">≈ {formatKHR(showReceiptPreview.penaltyFee * EXCHANGE_RATE_USD_TO_KHR)}</span>
+                    </div>
                   </div>
                 )}
                 <div className="flex justify-between text-indigo-700 font-extrabold text-sm pt-2 border-t border-dashed border-slate-200">
                   <span>ទឹកប្រាក់សរុប (Grand Total):</span>
-                  <span className="font-mono">{formatUSD(showReceiptPreview.totalAmount)}</span>
+                  <div className="text-right">
+                    <span className="font-mono block text-sm">{formatUSD(showReceiptPreview.totalAmount)}</span>
+                    <span className="text-xs text-indigo-650 font-mono block">≈ {formatKHR(showReceiptPreview.totalAmount * EXCHANGE_RATE_USD_TO_KHR)}</span>
+                  </div>
                 </div>
               </div>
 
@@ -306,7 +318,7 @@ export default function LoanDetails({
               <div className="space-y-2">
                 <p className="font-bold text-slate-900 text-[13px] border-b border-slate-100 pb-1">ប្រការ ១៖ លក្ខខណ្ឌហិរញ្ញវត្ថុ</p>
                 <p>
-                  អ្នកខ្ចីបានសន្មត់ខ្ចីប្រាក់ចំនួនសរុប <b>{formatUSD(currentLoan.principal)}</b> ជាមួយអត្រាការប្រាក់ <b>{currentLoan.interestRate}%</b> ក្នុងមួយខែ គណនាជាប្រភេទ <b>{currentLoan.interestType === 'FLAT' ? 'ការប្រាក់ថេរ (Flat)' : 'ការប្រាក់ថយចុះ (Declining)'}</b>។ រយៈពេលសរុបមានចំនួន <b>{currentLoan.termCount} ដង</b> ({currentLoan.termUnit}) ដោយចាប់ផ្តើមគិតចាប់ពី <b>{formatKhmerDate(currentLoan.startDate)}</b> រហូតដល់ថ្ងៃបញ្ចប់សព្វគ្រប់នៅ <b>{formatKhmerDate(currentLoan.endDate)}</b>។
+                  អ្នកខ្ចីបានសន្មត់ខ្ចីប្រាក់ចំនួនសរុប <b>{formatUSD(currentLoan.principal)} ({formatKHR(currentLoan.principal * EXCHANGE_RATE_USD_TO_KHR)})</b> ជាមួយអត្រាការប្រាក់ <b>{currentLoan.interestRate}%</b> ក្នុងមួយខែ គណនាជាប្រភេទ <b>{currentLoan.interestType === 'FLAT' ? 'ការប្រាក់ថេរ (Flat)' : 'ការប្រាក់ថយចុះ (Declining)'}</b>។ រយៈពេលសរុបមានចំនួន <b>{currentLoan.termCount} ដង</b> ({currentLoan.termUnit}) ដោយចាប់ផ្តើមគិតចាប់ពី <b>{formatKhmerDate(currentLoan.startDate)}</b> រហូតដល់ថ្ងៃបញ្ចប់សព្វគ្រប់នៅ <b>{formatKhmerDate(currentLoan.endDate)}</b>។
                 </p>
               </div>
 
@@ -314,7 +326,7 @@ export default function LoanDetails({
                 <div className="space-y-2">
                   <p className="font-bold text-slate-900 text-[13px] border-b border-slate-100 pb-1">ប្រការ ២៖ ទ្រព្យសម្បត្តិបញ្ចាំ / ទំនិញរងការធានា</p>
                   <p>
-                    ដើម្បីធានាលើការបង់ប្រាក់ឱ្យមានភាពជឿជាក់ខ្ពស់ ភាគីអតិថិជនបានដាក់ទុកជាទ្រព្យបញ្ចាំ / ទំនិញបង់រំលស់នូវ៖ <b>{currentLoan.collateral.name}</b>, ប្រភេទលំអិត/ស៊េរី <b>{currentLoan.collateral.serialNumber}</b>, ស្ថានភាពជាក់ស្តែង <b>{currentLoan.collateral.condition}</b>, ដែលមានតម្លៃប៉ាន់ស្មានទីផ្សារប្រមាណ <b>{formatUSD(currentLoan.collateral.estimatedValue)}</b>។ ទ្រព្យសកម្មនេះនឹងត្រូវរក្សាទុកក្នុងទូដែក ឬឃ្លាំងដែលមានសុវត្ថិភាពនៅ <b>{currentLoan.collateral.storageLocation}</b> រហូតដល់ថ្ងៃសងប្រាក់ផ្ដាច់។
+                    ដើម្បីធានាលើការបង់ប្រាក់ឱ្យមានភាពជឿជាក់ខ្ពស់ ភាគីអតិថិជនបានដាក់ទុកជាទ្រព្យបញ្ចាំ / ទំនិញបង់រំលស់នូវ៖ <b>{currentLoan.collateral.name}</b>, ប្រភេទលំអិត/ស៊េរី <b>{currentLoan.collateral.serialNumber}</b>, ស្ថានភាពជាក់ស្តែង <b>{currentLoan.collateral.condition}</b>, ដែលមានតម្លៃប៉ាន់ស្មានទីផ្សារប្រមាណ <b>{formatUSD(currentLoan.collateral.estimatedValue)} ({formatKHR(currentLoan.collateral.estimatedValue * EXCHANGE_RATE_USD_TO_KHR)})</b>។ ទ្រព្យសកម្មនេះនឹងត្រូវរក្សាទុកក្នុងទូដែក ឬឃ្លាំងដែលមានសុវត្ថិភាពនៅ <b>{currentLoan.collateral.storageLocation}</b> រហូតដល់ថ្ងៃសងប្រាក់ផ្ដាច់។
                   </p>
                 </div>
               )}
@@ -444,6 +456,9 @@ export default function LoanDetails({
                       <div className={`text-xs font-semibold ${isSelected ? 'text-white' : 'text-slate-900'}`}>{loan.customerName}</div>
                       <div className={`text-[10px] font-mono ${isSelected ? 'text-slate-400' : 'text-slate-500'}`}>
                         ដើមមេ៖ {formatUSD(loan.principal)} | សល់៖ {formatUSD(outstandingTotal)}
+                        <span className="block text-[9px] font-sans opacity-95 mt-0.5">
+                          (≈ សល់ {formatKHR(outstandingTotal * EXCHANGE_RATE_USD_TO_KHR)})
+                        </span>
                       </div>
                     </div>
 
@@ -499,6 +514,7 @@ export default function LoanDetails({
                   <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl">
                     <div className="text-slate-400 text-[10px] mb-1 uppercase tracking-wider">ប្រាក់ដើមស្នើសុំ</div>
                     <div className="text-base text-slate-900 font-bold font-mono">{formatUSD(currentLoan.principal)}</div>
+                    <div className="text-[10px] text-slate-400 font-mono mt-0.5">≈ {formatKHR(currentLoan.principal * EXCHANGE_RATE_USD_TO_KHR)}</div>
                   </div>
                   <div className="p-3 bg-slate-50 border border-slate-105 rounded-xl">
                     <div className="text-slate-400 text-[10px] mb-1 uppercase tracking-wider">អត្រាការប្រាក់</div>
@@ -525,7 +541,7 @@ export default function LoanDetails({
                       <div><span className="text-slate-400">ឈ្មោះទ្រព្យ៖</span> <span className="font-bold text-slate-800">{currentLoan.collateral.name}</span></div>
                       <div><span className="text-slate-400">លេខគ្រឿង/Serial៖</span> <span className="font-mono text-slate-700">{currentLoan.collateral.serialNumber}</span></div>
                       <div><span className="text-slate-400">ស្ថានភាព៖</span> <span className="font-semibold text-slate-700">{currentLoan.collateral.condition}</span></div>
-                      <div><span className="text-slate-400">តម្លៃប៉ាន់ស្មាន៖</span> <span className="font-mono font-bold text-emerald-600">{formatUSD(currentLoan.collateral.estimatedValue)}</span></div>
+                      <div><span className="text-slate-400">តម្លៃប៉ាន់ស្មាន៖</span> <span className="font-mono font-bold text-emerald-600">{formatUSD(currentLoan.collateral.estimatedValue)} ({formatKHR(currentLoan.collateral.estimatedValue * EXCHANGE_RATE_USD_TO_KHR)})</span></div>
                       <div className="md:col-span-2"><span className="text-slate-400">ទីតាំងរក្សាទុក៖</span> <span className="font-bold text-indigo-900">{currentLoan.collateral.storageLocation}</span></div>
                     </div>
                     {currentLoan.collateral.notes && (
@@ -572,7 +588,10 @@ export default function LoanDetails({
                       <div className="md:col-span-2 p-3 bg-indigo-50/50 border border-indigo-100/60 rounded-xl text-xs space-y-1 my-1">
                         <div className="flex justify-between">
                           <span className="text-slate-500">ប្រាក់ត្រូវទូទាត់សរុបដំណាក់កាល៖</span>
-                          <span className="font-mono font-bold text-slate-900">{formatUSD(selectedScheduleObj.total)}</span>
+                          <div className="text-right">
+                            <span className="font-mono font-bold text-slate-900 block">{formatUSD(selectedScheduleObj.total)}</span>
+                            <span className="text-[10px] text-slate-400 font-mono block">≈ {formatKHR(selectedScheduleObj.total * EXCHANGE_RATE_USD_TO_KHR)}</span>
+                          </div>
                         </div>
                         <div className="flex justify-between text-[11px] text-slate-400">
                           <span>(ប្រាក់ដើម៖ {formatUSD(selectedScheduleObj.principal)} | ការប្រាក់៖ {formatUSD(selectedScheduleObj.interest)})</span>
@@ -681,9 +700,24 @@ export default function LoanDetails({
                               {s.dueDate}
                               <span className="block text-[9px] text-slate-400 font-sans">{formatKhmerDate(s.dueDate)}</span>
                             </td>
-                            <td className="py-3 px-3 text-right font-bold text-slate-900">{formatUSD(s.total)}</td>
-                            <td className="py-3 px-3 text-right font-mono text-slate-550">{formatUSD(s.principal)}</td>
-                            <td className="py-3 px-3 text-right font-mono text-slate-550">+{formatUSD(s.interest)}</td>
+                            <td className="py-3 px-3 text-right font-bold text-slate-900">
+                              <div>{formatUSD(s.total)}</div>
+                              <div className="text-[10px] text-slate-400 font-mono font-normal">
+                                ≈ {formatKHR(s.total * EXCHANGE_RATE_USD_TO_KHR)}
+                              </div>
+                            </td>
+                            <td className="py-3 px-3 text-right font-mono text-slate-550">
+                              <div>{formatUSD(s.principal)}</div>
+                              <div className="text-[9px] text-slate-400 font-mono">
+                                ≈ {formatKHR(s.principal * EXCHANGE_RATE_USD_TO_KHR)}
+                              </div>
+                            </td>
+                            <td className="py-3 px-3 text-right font-mono text-slate-550">
+                              <div>+{formatUSD(s.interest)}</div>
+                              <div className="text-[9px] text-slate-400 font-mono">
+                                ≈ {formatKHR(s.interest * EXCHANGE_RATE_USD_TO_KHR)}
+                              </div>
+                            </td>
                             <td className="py-3 px-3 font-mono text-slate-500">
                               {s.paidDate ? s.paidDate : <span className="text-slate-350 italic">មិនទាន់បង់</span>}
                               {s.paidDate && (

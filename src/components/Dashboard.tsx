@@ -5,7 +5,7 @@
 
 import React, { useMemo } from 'react';
 import { Customer, Loan, LoanStatus, Transaction, LoanType } from '../types';
-import { formatUSD, formatKhmerDate } from '../utils/sampleData';
+import { formatUSD, formatKhmerDate, formatKHR, EXCHANGE_RATE_USD_TO_KHR } from '../utils/sampleData';
 import { 
   DollarSign, 
   Users, 
@@ -414,6 +414,9 @@ export default function Dashboard({ customers, loans, transactions, onNavigate }
               </span>
               <div className={`text-3xl font-extrabold font-mono tracking-tight ${kpiStats.totalOverdueAmount > 0 ? 'text-red-600' : 'text-slate-900'}`}>
                 {formatUSD(kpiStats.totalOverdueAmount)}
+                <span className="block text-xs font-semibold text-red-500/80 mt-1 font-mono">
+                  ≈ {formatKHR(kpiStats.totalOverdueAmount * EXCHANGE_RATE_USD_TO_KHR)}
+                </span>
               </div>
               <p className="text-[11px] text-slate-400 leading-normal">
                 {kpiStats.totalOverdueAmount > 0 ? 'ចំនួនប្រាក់ដើមនិងការប្រាក់ដែលយឺតយ៉ាវ' : 'ស្ថានភាពទូទាត់ល្អប្រសើរឥតខ្ចោះ'}
@@ -431,12 +434,16 @@ export default function Dashboard({ customers, loans, transactions, onNavigate }
               <span className="text-slate-500 text-xs font-semibold block uppercase tracking-wide">
                 ចំណូលផ្ទាល់ខែនេះ (Current Month Revenue)
               </span>
-              <div className="text-3xl font-extrabold text-emerald-600 font-mono tracking-tight">
+              <div className="text-3xl font-extrabold text-emerald-600 font-mono tracking-tight animate-fade-in">
                 {formatUSD(kpiStats.currentMonthRevenue)}
+                <span className="block text-xs font-semibold text-emerald-600/80 mt-1 font-mono">
+                  ≈ {formatKHR(kpiStats.currentMonthRevenue * EXCHANGE_RATE_USD_TO_KHR)}
+                </span>
               </div>
               <p className="text-[11px] text-slate-500 leading-normal flex items-center gap-1 flex-wrap">
                 <span>ប្រមូលសរុបរួម:</span>
                 <span className="font-bold text-indigo-600 font-mono">{formatUSD(kpiStats.currentMonthTotalCollected)}</span>
+                <span className="text-slate-405 font-mono">({formatKHR(kpiStats.currentMonthTotalCollected * EXCHANGE_RATE_USD_TO_KHR)})</span>
               </p>
             </div>
             <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100 font-bold group-hover:scale-110 transition-transform">
@@ -536,7 +543,12 @@ export default function Dashboard({ customers, loans, transactions, onNavigate }
                 <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-4">
                   <div>
                     <span className="text-slate-400 text-[10px] block font-medium">ទឹកប្រាក់ត្រូវបង់ (Amount Due)</span>
-                    <span className="font-extrabold text-slate-900 text-sm font-mono">{formatUSD(item.amount)}</span>
+                    <span className="font-extrabold text-slate-900 text-sm font-mono block">
+                      {formatUSD(item.amount)}
+                    </span>
+                    <span className="text-[10px] text-amber-600 font-bold font-mono block">
+                      ≈ {formatKHR(item.amount * EXCHANGE_RATE_USD_TO_KHR)}
+                    </span>
                   </div>
                   <button
                     onClick={() => onNavigate('loans', item.loanId)}
@@ -559,6 +571,9 @@ export default function Dashboard({ customers, loans, transactions, onNavigate }
           <div className="space-y-1">
             <span className="text-slate-500 text-xs font-medium">ប្រាក់បញ្ចេញសរុប (Issued)</span>
             <div className="text-2xl font-bold text-slate-900 tracking-tight">{formatUSD(stats.totalLent)}</div>
+            <div className="text-xs text-slate-400 font-mono font-normal">
+              ≈ {formatKHR(stats.totalLent * EXCHANGE_RATE_USD_TO_KHR)}
+            </div>
             <span className="text-emerald-600 text-[11px] font-medium flex items-center gap-0.5">
               <ArrowUpRight className="w-3.5 h-3.5" /> ដើមទុនបញ្ចេញទាំងអស់
             </span>
@@ -573,6 +588,9 @@ export default function Dashboard({ customers, loans, transactions, onNavigate }
           <div className="space-y-1">
             <span className="text-slate-500 text-xs font-medium">សមតុល្យប្រាក់ដើមសល់ (Outstanding)</span>
             <div className="text-2xl font-bold text-indigo-600 tracking-tight">{formatUSD(stats.outstandingBalance)}</div>
+            <div className="text-xs text-indigo-400 font-mono font-normal">
+              ≈ {formatKHR(stats.outstandingBalance * EXCHANGE_RATE_USD_TO_KHR)}
+            </div>
             <span className="text-indigo-500 text-[11px] font-medium flex items-center gap-0.5">
               <Clock className="w-3.5 h-3.5" /> កំពុងមានដំណើរការ
             </span>
@@ -587,6 +605,9 @@ export default function Dashboard({ customers, loans, transactions, onNavigate }
           <div className="space-y-1">
             <span className="text-slate-500 text-xs font-medium">ការប្រាក់ប្រមូលបាន (Interest Collected)</span>
             <div className="text-2xl font-bold text-emerald-600 tracking-tight">{formatUSD(stats.totalCollectedInterest)}</div>
+            <div className="text-xs text-emerald-600/90 font-mono font-normal">
+              ≈ {formatKHR(stats.totalCollectedInterest * EXCHANGE_RATE_USD_TO_KHR)}
+            </div>
             <span className="text-slate-500 text-[11px] font-medium flex items-center gap-0.5">
               <ArrowDownLeft className="w-3.5 h-3.5" /> ចំណេញពីការប្រាក់សរុប
             </span>
@@ -893,7 +914,12 @@ export default function Dashboard({ customers, loans, transactions, onNavigate }
                         {formatKhmerDate(item.dueDate)}
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-right font-bold text-slate-900">{formatUSD(item.amount)}</td>
+                    <td className="py-3 px-4 text-right font-bold text-slate-900">
+                      <div>{formatUSD(item.amount)}</div>
+                      <div className="text-[10px] text-slate-400 font-mono font-normal">
+                        ≈ {formatKHR(item.amount * EXCHANGE_RATE_USD_TO_KHR)}
+                      </div>
+                    </td>
                     <td className="py-3 px-4 text-center">
                       {item.status === 'OVERDUE' ? (
                         <span className="px-2 py-0.5 rounded-md bg-red-100 text-red-700 text-[10px] font-bold border border-red-200">ហួសកាលកំណត់</span>

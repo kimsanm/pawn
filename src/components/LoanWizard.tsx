@@ -4,8 +4,8 @@
  */
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Customer, Loan, LoanType, InterestType, PaymentTerm, LoanStatus, Collateral } from '../types';
-import { generateSchedule, formatUSD, formatKhmerDate } from '../utils/sampleData';
+import { Customer, Loan, LoanType, InterestType, PaymentTerm, LoanStatus, Collateral, PawnshopSettings } from '../types';
+import { generateSchedule, formatUSD, formatKhmerDate, formatKHR, EXCHANGE_RATE_USD_TO_KHR } from '../utils/sampleData';
 import { Calendar, Percent, DollarSign, FileText, Check, ShieldAlert, HeartHandshake, Box, UserPlus, Info, Search } from 'lucide-react';
 
 interface LoanWizardProps {
@@ -14,21 +14,30 @@ interface LoanWizardProps {
   onAddCustomer: (customer: Customer) => void;
   initialSelectedCustomerId?: string;
   onNavigate: (tab: string, arg?: any) => void;
+  settings?: PawnshopSettings;
 }
 
-export default function LoanWizard({ customers, onAddLoan, onAddCustomer, initialSelectedCustomerId, onNavigate }: LoanWizardProps) {
+export default function LoanWizard({ customers, onAddLoan, onAddCustomer, initialSelectedCustomerId, onNavigate, settings }: LoanWizardProps) {
   // Wizard Setup States
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>(initialSelectedCustomerId || '');
   const [customerSearch, setCustomerSearch] = useState('');
   
   const [loanType, setLoanType] = useState<LoanType>(LoanType.STANDARD);
   const [principal, setPrincipal] = useState<number>(1000);
-  const [interestRate, setInterestRate] = useState<number>(2.0); // % per month
+  const [interestRate, setInterestRate] = useState<number>(settings?.defaultInterestRate ?? 2.0); // % per month
   const [interestType, setInterestType] = useState<InterestType>(InterestType.FLAT);
   const [termCount, setTermCount] = useState<number>(6);
-  const [termUnit, setTermUnit] = useState<PaymentTerm>(PaymentTerm.MONTHLY);
+  const [termUnit, setTermUnit] = useState<PaymentTerm>(settings?.defaultPaymentTerm ?? PaymentTerm.MONTHLY);
   const [startDate, setStartDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [notes, setNotes] = useState('');
+
+  // Sync settings when loaded
+  useEffect(() => {
+    if (settings) {
+      setInterestRate(settings.defaultInterestRate);
+      setTermUnit(settings.defaultPaymentTerm);
+    }
+  }, [settings]);
 
   // Collateral States (Active if Pawn or Installment is selected)
   const [colName, setColName] = useState('');
@@ -578,16 +587,21 @@ export default function LoanWizard({ customers, onAddLoan, onAddCustomer, initia
               <div className="p-3.5 bg-white/5 rounded-xl space-y-0.5">
                 <span className="text-slate-400 text-[10px]">ប្រាក់ដើមស្នើសុំ:</span>
                 <div className="text-lg font-bold font-mono text-white">{formatUSD(principal)}</div>
+                <div className="text-[10px] text-slate-400 font-mono">≈ {formatKHR(principal * EXCHANGE_RATE_USD_TO_KHR)}</div>
               </div>
               <div className="p-3.5 bg-white/5 rounded-xl space-y-0.5">
                 <span className="text-slate-400 text-[10px]">សរុបការប្រាក់ត្រូវបង់:</span>
                 <div className="text-lg font-bold font-mono text-emerald-400">+{formatUSD(scheduleSummary.interestSum)}</div>
+                <div className="text-[10px] text-emerald-500/80 font-mono">≈ {formatKHR(scheduleSummary.interestSum * EXCHANGE_RATE_USD_TO_KHR)}</div>
               </div>
             </div>
 
-            <div className="p-3.5 bg-indigo-950 border border-indigo-900 rounded-xl flex items-center justify-between text-xs">
+            <div className="p-3.5 bg-indigo-950 border border-indigo-900 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between text-xs gap-1.5">
               <span className="text-slate-300">ទឹកប្រាក់សរុបត្រូវសង (Total):</span>
-              <span className="text-lg font-black text-yellow-500 font-mono">{formatUSD(scheduleSummary.totalPay)}</span>
+              <div className="text-right">
+                <span className="text-lg font-black text-yellow-500 font-mono">{formatUSD(scheduleSummary.totalPay)}</span>
+                <span className="block text-[10px] text-slate-350 font-mono">≈ {formatKHR(scheduleSummary.totalPay * EXCHANGE_RATE_USD_TO_KHR)}</span>
+              </div>
             </div>
 
             {/* Scrollable Schedules Preview */}
@@ -608,6 +622,9 @@ export default function LoanWizard({ customers, onAddLoan, onAddCustomer, initia
                     </div>
                     <div className="text-right text-xs">
                       <div className="font-bold text-white font-mono">{formatUSD(s.total)}</div>
+                      <div className="text-[10px] text-amber-400 font-bold font-mono">
+                        ≈ {formatKHR(s.total * EXCHANGE_RATE_USD_TO_KHR)}
+                      </div>
                       <div className="text-[10px] text-slate-400 font-mono">
                         ដើម: {formatUSD(s.principal)} | ការ: {formatUSD(s.interest)}
                       </div>
