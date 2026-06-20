@@ -9,8 +9,12 @@ import {
   SAMPLE_CUSTOMERS, 
   SAMPLE_LOANS, 
   SAMPLE_TRANSACTIONS,
-  formatKhmerDate
+  formatKhmerDate,
+  formatUSD,
+  formatKHR,
+  EXCHANGE_RATE_USD_TO_KHR
 } from './utils/sampleData';
+import { sendTelegramNotification } from './utils/telegram';
 
 // Component Views
 import Dashboard from './components/Dashboard';
@@ -20,6 +24,8 @@ import LoanDetails from './components/LoanDetails';
 import Transactions from './components/Transactions';
 import BackupRestore from './components/BackupRestore';
 import Settings from './components/Settings';
+import LoginScreen from './components/LoginScreen';
+import QuickCalculator from './components/QuickCalculator';
 
 // Lucide Icons
 import { 
@@ -36,7 +42,9 @@ import {
   X,
   Sparkles,
   Search,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  LogOut,
+  Calculator
 } from 'lucide-react';
 
 const DEFAULT_SETTINGS: PawnshopSettings = {
@@ -49,7 +57,12 @@ const DEFAULT_SETTINGS: PawnshopSettings = {
   defaultAdminFee: 5.0,
   defaultPaymentTerm: PaymentTerm.MONTHLY,
   accentColor: 'yellow',
-  language: 'kh'
+  language: 'kh',
+  isSecurityEnabled: false,
+  appPasscode: '1234',
+  isTelegramEnabled: false,
+  telegramBotToken: '',
+  telegramChatId: '',
 };
 
 export default function App() {
@@ -58,6 +71,7 @@ export default function App() {
   const [loans, setLoans] = useState<Loan[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [settings, setSettings] = useState<PawnshopSettings>(DEFAULT_SETTINGS);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   
   // Global search bar query
   const [globalSearchQuery, setGlobalSearchQuery] = useState('');
@@ -70,6 +84,7 @@ export default function App() {
   
   // Responsive mobile sidebar toggle
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isCalcOpen, setIsCalcOpen] = useState<boolean>(false);
   
   // Digital Cambodian Clock Time state
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
@@ -141,6 +156,18 @@ export default function App() {
   const handleAddCustomer = (newCustomer: Customer) => {
     const updated = [newCustomer, ...customers];
     saveStateToLocalStorage(updated, loans, transactions);
+
+    // Send Telegram Notification
+    if (settings.isTelegramEnabled) {
+      const msg = `👤 <b>អតិថិជនថ្មីត្រូវបានចុះឈ្មោះ (New Client Registered)</b>\n` +
+        `━━━━━━━━━━━━━━━━━━━━━\n` +
+        `🆔 លេខកូដ៖ <code>${newCustomer.id}</code>\n` +
+        `👤 ឈ្មោះ៖ <b>${newCustomer.nameKh} (${newCustomer.nameEn})</b>\n` +
+        `📞 លេខទូរស័ព្ទ៖ <code>${newCustomer.phone}</code>\n` +
+        `🏠 អាសយដ្ឋាន៖ <i>${newCustomer.address}</i>\n` +
+        `⏰ កាលបរិច្ឆេទ៖ <code>${new Date().toLocaleString('kh-KH')}</code>`;
+      sendTelegramNotification(settings, msg).catch(err => console.error('Telegram error:', err));
+    }
   };
 
   const handleEditCustomer = (updatedCustomer: Customer) => {
@@ -159,6 +186,24 @@ export default function App() {
   const handleAddLoan = (newLoan: Loan) => {
     const updated = [newLoan, ...loans];
     saveStateToLocalStorage(customers, updated, transactions);
+
+    // Send Telegram Notification
+    if (settings.isTelegramEnabled) {
+      const client = customers.find(c => c.id === newLoan.customerId);
+      const clientName = client ? `${client.nameKh} (${client.nameEn})` : newLoan.customerName;
+      const typeLabel = newLoan.type === 'STANDARD' ? 'កម្ចីសាមញ្ញ (Standard)' : (newLoan.type === 'PAWN' ? 'បញ្ចាំទ្រព្យ (Pawn)' : 'បង់រំលស់ (Installment)');
+      
+      const msg = `🛍️ <b>កិច្ចសន្យាថ្មីត្រូវបានបង្កើត (New Contract Created)</b>\n` +
+        `━━━━━━━━━━━━━━━━━━━━━\n` +
+        `📄 លេខកុងត្រា៖ <code>${newLoan.id}</code>\n` +
+        `👤 ឈ្មោះអតិថិជន៖ <b>${clientName}</b>\n` +
+        `📝 ប្រភេទកិច្ចសន្យា៖ <b>${typeLabel}</b>\n` +
+        `💰 ទឹកប្រាក់ស្នើសុំ៖ <b>${formatUSD(newLoan.principal)}</b> (≈ ${formatKHR(newLoan.principal * EXCHANGE_RATE_USD_TO_KHR)})\n` +
+        `📈 អត្រាការប្រាក់៖ <b>${newLoan.interestRate}%</b>/ខែ (${newLoan.interestType === 'FLAT' ? 'ការប្រាក់ថេរ' : 'ការប្រាក់ថយចុះ'})\n` +
+        `📅 រយៈពេល៖ <b>${newLoan.termCount} ដង</b>\n` +
+        `⏰ ថ្ងៃបង្កើត៖ <code>${newLoan.startDate}</code>`;
+      sendTelegramNotification(settings, msg).catch(err => console.error('Telegram error:', err));
+    }
   };
 
   const handleAddTransactionUpdateLoan = (
@@ -182,6 +227,26 @@ export default function App() {
     });
 
     saveStateToLocalStorage(customers, updatedLoans, updatedTx);
+
+    // Send Telegram Notification
+    if (settings.isTelegramEnabled) {
+      const currentLoan = loans.find(l => l.id === newTx.loanId);
+      const clientName = currentLoan ? currentLoan.customerName : 'មិនស្គាល់';
+      const statusLabel = newLoanStatus === 'PAID' ? '🔒 រួចរាល់ស្ថាពរ (FULLY PAID)' : '⏳ កំពុងបន្តសង';
+      
+      const msg = `💵 <b>ការបង់ប្រាក់ជោគជ័យ (Payment Received Alert)</b>\n` +
+        `━━━━━━━━━━━━━━━━━━━━━\n` +
+        `🧾 វិក្កយបត្រ៖ <code>${newTx.id}</code>\n` +
+        `📄 លេខកុងត្រា៖ <code>${currentLoan?.id || '---'}</code>\n` +
+        `👤 អតិថិជន៖ <b>${clientName}</b>\n` +
+        `💵 ប្រាក់ដើមកាត់៖ <b>${formatUSD(newTx.paidPrincipal)}</b>\n` +
+        `📈 ការប្រាក់បង់៖ <b>${formatUSD(newTx.paidInterest)}</b>\n` +
+        `💰 ផាកពិន័យ៖ <b>${formatUSD(newTx.penaltyFee)}</b>\n` +
+        `🧾 សរុបទឹកប្រាក់៖ <b>${formatUSD(newTx.totalAmount)}</b> (≈ ${formatKHR(newTx.totalAmount * EXCHANGE_RATE_USD_TO_KHR)})\n` +
+        `📊 ស្ថានភាពបន្ត៖ <b>${statusLabel}</b>\n` +
+        `⏰ កាលបរិច្ឆេទបង់៖ <code>${newTx.date}</code>`;
+      sendTelegramNotification(settings, msg).catch(err => console.error('Telegram error:', err));
+    }
   };
 
   // System Database Operations (Backup restore / resets)
@@ -220,6 +285,10 @@ export default function App() {
   } : {
     text: 'text-yellow-500', bg: 'bg-yellow-500', activeBtn: 'bg-yellow-500 text-slate-950 shadow-md shadow-yellow-500/10', activeIcon: 'text-slate-950', textActive: 'text-slate-800'
   };
+
+  if (settings.isSecurityEnabled && !isAuthenticated) {
+    return <LoginScreen settings={settings} onVerify={() => setIsAuthenticated(true)} />;
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row" id="app_root">
@@ -285,15 +354,42 @@ export default function App() {
               </button>
             );
           })}
+
+          {/* Quick Loan Calculator Action Button */}
+          <button
+            type="button"
+            onClick={() => {
+              setIsCalcOpen(true);
+              setMobileMenuOpen(false);
+            }}
+            className="w-full mt-4 p-3 rounded-xl bg-amber-500/10 hover:bg-amber-500/18 border border-amber-500/20 text-amber-500 hover:text-amber-400 flex items-center gap-3.5 text-left transition-all cursor-pointer shadow-xs font-semibold"
+          >
+            <Calculator className="w-5 h-5 text-amber-500 shrink-0 select-none" />
+            <div className="space-y-0.5">
+              <div className="text-xs font-bold leading-none">គណនាឥណទានរហ័ស</div>
+              <div className="text-[10px] font-normal tracking-wide text-slate-400">Quick Loan Calculator</div>
+            </div>
+          </button>
         </nav>
 
         {/* Sidebar Footer context summary */}
         <div className="p-4 border-t border-slate-800 space-y-2 bg-slate-950/20 text-[10px] text-slate-500">
-          <div className="flex items-center gap-2 text-slate-400">
-            <Shield className={`w-3.5 h-3.5 ${accent.text}`} />
-            <span className="font-bold">ប្រព័ន្ធសុវត្ថិភាពខ្ពស់ (Local Safe)</span>
+          <div className="flex items-center justify-between text-slate-400">
+            <div className="flex items-center gap-2">
+              <Shield className={`w-3.5 h-3.5 ${accent.text}`} />
+              <span className="font-bold">ប្រព័ន្ធសុវត្ថិភាពខ្ពស់ (Local Safe)</span>
+            </div>
           </div>
           <p className="leading-relaxed">រាល់ទិន្នន័យទាំងអស់ត្រូវបានរក្សាទុកនៅលើដ្រាយវ៍របស់អ្នកជាលក្ខណៈសម្ងាត់បំផុត គ្មានការលេចធ្លាយឡើយ។</p>
+          {settings.isSecurityEnabled && (
+            <button
+              onClick={() => setIsAuthenticated(false)}
+              className="w-full py-2 bg-red-950/30 hover:bg-red-950/50 border border-red-900/30 text-red-400 hover:text-red-300 rounded-lg flex items-center justify-center gap-2 transition-all text-[10px] font-bold mt-1"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>ចាកចេញពីគណនី (Lock App)</span>
+            </button>
+          )}
         </div>
       </aside>
 
@@ -431,6 +527,12 @@ export default function App() {
         </main>
       </div>
 
+      {/* Standalone Quick Loan Calculator Modal */}
+      <QuickCalculator 
+        isOpen={isCalcOpen} 
+        onClose={() => setIsCalcOpen(false)} 
+        accentColor={settings.accentColor} 
+      />
     </div>
   );
 }

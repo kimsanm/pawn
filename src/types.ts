@@ -104,5 +104,12 @@ export interface PawnshopSettings {
   defaultPaymentTerm: PaymentTerm;  // DAILY, WEEKLY, MONTHLY
   accentColor: string;              // hex or tailwind class name like 'yellow' | 'indigo' | 'emerald' etc.
   language: 'kh' | 'en';
+  // Security log in parameters
+  isSecurityEnabled: boolean;       // Enable app PIN/Passcode protection
+  appPasscode: string;              // Access passcode (e.g., '1234')
+  // Telegram Bot integration
+  isTelegramEnabled: boolean;       // Turn on Telegram notifications
+  telegramBotToken: string;         // Bot Token from BotFather
+  telegramChatId: string;           // Chat target ID
 }
 

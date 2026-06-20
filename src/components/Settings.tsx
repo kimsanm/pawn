@@ -18,9 +18,13 @@ import {
   Check, 
   ShieldAlert,
   Smartphone,
-  MapPin
+  MapPin,
+  Lock,
+  Send,
+  Bell
 } from 'lucide-react';
 import { motion } from 'motion/react';
+import { sendTelegramNotification } from '../utils/telegram';
 
 interface SettingsProps {
   settings: PawnshopSettings;
@@ -31,6 +35,29 @@ interface SettingsProps {
 export default function Settings({ settings, onSaveSettings, onResetSettings }: SettingsProps) {
   const [formState, setFormState] = useState<PawnshopSettings>({ ...settings });
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [testStatus, setTestStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+
+  const handleTestTelegram = async () => {
+    if (!formState.telegramBotToken || !formState.telegramChatId) {
+      alert('សូមបញ្ចូល Bot Token និង Chat ID ជាមុនសិន! (Please fill Bot Token and Chat ID first)');
+      return;
+    }
+    setTestStatus('loading');
+    const tempSettings: PawnshopSettings = {
+      ...formState,
+      isTelegramEnabled: true
+    };
+    const testMessage = `🔔 <b>សាកល្បងប្រព័ន្ធ Telegram Bot ពីហាងបញ្ចាំជំនាន់ថ្មី ផ្ញើដោយជោគជ័យ!</b>\n\n🛍️ ហាង៖ <b>${formState.businessName || 'មិនទាន់កំណត់'}</b>\n💬 ស្ថានភាព៖ <b>ដំណើរការតភ្ជាប់ល្អឥតខ្ចោះ 🎉</b>\n⏰ ម៉ោងតេស្ត៖ <code>${new Date().toLocaleString('kh-KH')}</code>`;
+    
+    const ok = await sendTelegramNotification(tempSettings, testMessage);
+    if (ok) {
+      setTestStatus('success');
+      setTimeout(() => setTestStatus('idle'), 4000);
+    } else {
+      setTestStatus('error');
+      setTimeout(() => setTestStatus('idle'), 4000);
+    }
+  };
 
   // Available theme color options
   const themeColors = [
@@ -234,6 +261,131 @@ export default function Settings({ settings, onSaveSettings, onResetSettings }: 
                 </select>
                 <p className="text-[10px] text-slate-400">កាលកំណត់សងដែលជ្រើសរើសដោយស្វ័យប្រវត្តក្នុងទំព័របង្កើតថ្មី</p>
               </div>
+            </div>
+          </div>
+
+          {/* Section 3: App Security */}
+          <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-6 space-y-5" id="security_settings_card">
+            <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2.5 pb-3 border-b border-slate-100">
+              <Lock className="w-5 h-5 text-red-600" />
+              <span>សន្តិសុខ និងគណនីចូលប្រើប្រាស់ (App Login & Security Protection)</span>
+            </h3>
+
+            <div className="space-y-4 text-xs text-slate-800">
+              <label className="flex items-start gap-3 p-3.5 bg-slate-50 border border-slate-150 rounded-xl cursor-pointer hover:bg-slate-100/60 transition-all select-none col-span-2">
+                <input 
+                  type="checkbox" 
+                  checked={formState.isSecurityEnabled}
+                  onChange={(e) => setFormState({ ...formState, isSecurityEnabled: e.target.checked })}
+                  className="mt-0.5 w-4 h-4 rounded-md border-slate-300 text-indigo-600 focus:ring-indigo-500accent-indigo-600"
+                />
+                <div className="space-y-0.5">
+                  <div className="font-bold text-slate-800 text-xs">បើកដំណើរការផ្ទៀងផ្ទាត់លេខកូដសម្ងាត់ពេលបើកកម្មវិធី (Enable Security Passcode Protection)</div>
+                  <div className="text-[10px] text-slate-500">តម្រូវឱ្យអ្នកប្រើបញ្ចូលលេខកូដត្រឹមត្រូវជាមុនសិន ទើបអាចចូលដោះស្រាយ ឬមើលទិន្នន័យបាន។</div>
+                </div>
+              </label>
+
+              {formState.isSecurityEnabled && (
+                <motion.div 
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  className="space-y-2 pt-1"
+                >
+                  <label className="font-bold text-slate-700 block text-xs">កំណត់លេខកូដចូលកម្មវិធី (Set App Passcode) *</label>
+                  <input 
+                    type="text" 
+                    value={formState.appPasscode}
+                    onChange={(e) => setFormState({ ...formState, appPasscode: e.target.value })}
+                    placeholder="ឧ. 1234, admin, psh77" 
+                    className="w-full max-w-sm px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-yellow-500/20 focus:border-yellow-500 outline-hidden font-mono font-bold text-slate-900 tracking-wider text-sm transition-all"
+                    required={formState.isSecurityEnabled}
+                    minLength={3}
+                  />
+                  <p className="text-[10px] text-slate-400">សូមចងចាំលេខកូដនេះឱ្យបានច្បាស់លាស់។ លេខកូដលំនាំដើមគឺ៖ <code className="font-bold bg-slate-100 px-1 py-0.5 rounded text-amber-700">1234</code></p>
+                </motion.div>
+              )}
+            </div>
+          </div>
+
+          {/* Section 4: Telegram Notifications */}
+          <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-6 space-y-5" id="telegram_settings_card">
+            <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2.5 pb-3 border-b border-slate-100">
+              <Bell className="w-5 h-5 text-sky-500" />
+              <span>សេវាកាត់ផ្ញើសារសកម្មភាពទៅកាន់ Telegram Bot (Telegram Bot Alerts)</span>
+            </h3>
+
+            <div className="space-y-4 text-xs text-slate-800">
+              <label className="flex items-start gap-3 p-3.5 bg-sky-50/40 border border-sky-100 rounded-xl cursor-pointer hover:bg-sky-50/80 transition-all select-none">
+                <input 
+                  type="checkbox" 
+                  checked={formState.isTelegramEnabled}
+                  onChange={(e) => setFormState({ ...formState, isTelegramEnabled: e.target.checked })}
+                  className="mt-0.5 w-4 h-4 rounded-md border-sky-300 text-sky-600 focus:ring-sky-500 accent-sky-600"
+                />
+                <div className="space-y-0.5">
+                  <div className="font-bold text-sky-900 text-xs">បើកប្រព័ន្ធបញ្ជូនដំណឹងទៅ Telegram Bot (Turn on Bot Notifications)</div>
+                  <div className="text-[10px] text-sky-700/80">រាល់ប្រតិបត្តិការបង់ប្រាក់ បង្កើតកិច្ចសន្យាថ្មី ឬការកែប្រែសំខាន់ៗ នឹងត្រូវបញ្ជូនទៅកាន់ Telegram Group/Chat របស់អ្នកភ្លាមៗ!</div>
+                </div>
+              </label>
+
+              {formState.isTelegramEnabled && (
+                <motion.div 
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2"
+                >
+                  <div className="space-y-1.5">
+                    <label className="font-bold text-slate-700 block">Telegram Bot Token *</label>
+                    <input 
+                      type="text" 
+                      value={formState.telegramBotToken}
+                      onChange={(e) => setFormState({ ...formState, telegramBotToken: e.target.value })}
+                      placeholder="ឧ. 12345678:ABCDefg..." 
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 focus:bg-white outline-hidden font-mono text-slate-900 transition-all text-[11px]"
+                      required={formState.isTelegramEnabled}
+                    />
+                    <p className="text-[9px] text-slate-400">ទទួលបានពី <a href="https://t.me/BotFather" target="_blank" rel="noreferrer" className="text-sky-600 font-bold underline">@BotFather</a></p>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="font-bold text-slate-700 block">Chat ID / Group ID *</label>
+                    <input 
+                      type="text" 
+                      value={formState.telegramChatId}
+                      onChange={(e) => setFormState({ ...formState, telegramChatId: e.target.value })}
+                      placeholder="ឧ. -100123456789 ឬ 98765432" 
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 focus:bg-white outline-hidden font-mono text-slate-900 transition-all"
+                      required={formState.isTelegramEnabled}
+                    />
+                    <p className="text-[9px] text-slate-400">ឆាតផ្ទាល់ខ្លួន ឬកូដអត្តសញ្ញាណគ្រុបតេឡេក្រាម</p>
+                  </div>
+
+                  <div className="md:col-span-2 pt-2 flex flex-col md:flex-row items-center gap-3">
+                    <button
+                      type="button"
+                      disabled={testStatus === 'loading'}
+                      onClick={handleTestTelegram}
+                      className="w-full md:w-auto px-5 py-3.5 rounded-xl bg-sky-500 hover:bg-sky-600 text-white font-bold flex items-center justify-center gap-2 transition-all active:scale-98 text-xs disabled:opacity-50"
+                    >
+                      <Send className="w-4 h-4" />
+                      {testStatus === 'loading' ? 'កំពុងសាកល្បង...' : 'ផ្ញើសារសាកល្បង (Test Connection)'}
+                    </button>
+
+                    {testStatus === 'success' && (
+                      <span className="text-emerald-600 font-semibold text-xs flex items-center gap-1.5">
+                        <Check className="w-4 h-4 p-0.5 rounded-full bg-emerald-500 text-white" />
+                        ទទួលបានជោគជ័យ! សូមពិនិត្យមើលឆាត Telegram របស់អ្នក។
+                      </span>
+                    )}
+
+                    {testStatus === 'error' && (
+                      <span className="text-red-500 font-semibold text-xs text-center md:text-left">
+                        ⚠️ បរាជ័យ! សូមពិនិត្យមើល Token និង Chat ID ឡើងវិញ។
+                      </span>
+                    )}
+                  </div>
+                </motion.div>
+              )}
             </div>
           </div>
         </div>
