@@ -5,7 +5,7 @@
 
 import React, { useRef, useState, useEffect } from 'react';
 import { Customer, Loan, Transaction } from '../types';
-import { Download, Upload, Trash2, Database, ShieldAlert, Sparkles, RefreshCcw } from 'lucide-react';
+import { Download, Upload, Trash2, Database, ShieldAlert, Sparkles, RefreshCcw, FileSpreadsheet } from 'lucide-react';
 
 interface BackupRestoreProps {
   customers: Customer[];
@@ -140,6 +140,74 @@ export default function BackupRestore({ customers, loans, transactions, onImport
     downloadAnchor.remove();
 
     setSuccessMessage('ការនាំចេញទិន្នន័យ (Backup JSON) បានសម្រេចដោយជោគជ័យ!');
+    setTimeout(() => setSuccessMessage(null), 4000);
+  };
+
+  // Export transactions history as CSV
+  const handleExportTransactionsCSV = () => {
+    if (transactions.length === 0) {
+      alert('គ្មានទិន្នន័យប្រតិបត្តិការដើម្បីនាំចេញទេ! (No transaction history to export)');
+      return;
+    }
+
+    const escapeCSV = (val: string | number | undefined | null): string => {
+      if (val === undefined || val === null) return '""';
+      const str = String(val);
+      const escaped = str.replace(/"/g, '""');
+      return `"${escaped}"`;
+    };
+
+    const csvRows: string[] = [];
+
+    // Headers with bilingual format
+    const headers = [
+      "Receipt ID (លេខវិក្កយបត្រ)",
+      "Contract ID (លេខកិច្ចសន្យា)",
+      "Customer Name (ឈ្មោះអតិថិជន)",
+      "Payment Date (ថ្ងៃទទួលប្រាក់)",
+      "Installment No (លើកទី)",
+      "Principal Paid (ប្រាក់ដើមបានបង់ $)",
+      "Interest Paid (ការប្រាក់បានបង់ $)",
+      "Penalty Fee (ផាកពិន័យ/យឺតយ៉ាវ $)",
+      "Total Amount (សរុបប្រាក់បានទទួល $)",
+      "Payment Method (វិធីសាស្រ្តទូទាត់)",
+      "Receiver (អ្នកទទួលប្រាក់)",
+      "Notes (ចំណាំ)"
+    ];
+    csvRows.push(headers.map(escapeCSV).join(","));
+
+    // Population of transactions
+    transactions.forEach(tx => {
+      const row = [
+        tx.id,
+        tx.loanId,
+        tx.customerName,
+        tx.date,
+        tx.scheduleId,
+        tx.paidPrincipal,
+        tx.paidInterest,
+        tx.penaltyFee,
+        tx.totalAmount,
+        tx.paymentMethod,
+        tx.receiver,
+        tx.notes || ""
+      ];
+      csvRows.push(row.map(escapeCSV).join(","));
+    });
+
+    const BOM = "\uFEFF";
+    const csvContent = BOM + csvRows.join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `pawnshop_transactions_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    setSuccessMessage('ការនាំចេញប្រវត្តិប្រតិបត្តិការជាឯកសារ CSV បានសម្រេចដោយជោគជ័យ!');
     setTimeout(() => setSuccessMessage(null), 4000);
   };
 
@@ -293,9 +361,26 @@ export default function BackupRestore({ customers, loans, transactions, onImport
             </p>
             <button
               onClick={handleExportDB}
-              className="w-full py-2.5 bg-slate-900 hover:bg-indigo-950 text-white font-black text-xs rounded-xl flex items-center justify-center gap-2 transition-all shadow-md mt-2"
+              className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-black text-xs rounded-xl flex items-center justify-center gap-2 transition-all shadow-md active:scale-98 cursor-pointer mt-2"
             >
               <Download className="w-4 h-4 text-emerald-400" /> <b>នាំចេញជាឯកសារ JSON BACKUP</b>
+            </button>
+          </div>
+
+          {/* Export Transactions CSV (Accounting) Card */}
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs space-y-4" id="export_csv_accounting_card">
+            <h4 className="font-bold text-slate-900 text-xs flex items-center gap-2">
+              <FileSpreadsheet className="w-4.5 h-4.5 text-indigo-500" />
+              នាំចេញប្រវត្តិប្រតិបត្តិការជា CSV (Export Accounting CSV)
+            </h4>
+            <p className="text-[11px] text-slate-500 leading-relaxed font-semibold">
+              ទាញយកបញ្ជីប្រវត្តិប្រតិបត្តិការទទួលប្រាក់ទាំងអស់ជាទម្រង់ CSV (Excel) សម្រាប់ការវិភាគក្រៅប្រព័ន្ធ ឬធ្វើសេចក្តីរាយការណ៍គណនេយ្យបន្ទាប់បន្សំ។ ទទួលបានការបំបែកធាតុចំណូលការប្រាក់ និងប្រាក់ដើម។
+            </p>
+            <button
+              onClick={handleExportTransactionsCSV}
+              className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs rounded-xl flex items-center justify-center gap-2 transition-all shadow-md active:scale-98 cursor-pointer mt-2"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-white" /> <b>នាំចេញជាឯកសារ CSV (EXCEL)</b>
             </button>
           </div>
 
