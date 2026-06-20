@@ -21,13 +21,16 @@ import {
   Bell,
   CheckCircle,
   Briefcase,
-  Coins
+  Coins,
+  BarChart3
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import {
   ResponsiveContainer,
   LineChart,
   Line,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -69,6 +72,30 @@ const CustomTooltip = ({ active, payload, label }: any) => {
           <div className="flex justify-between gap-5 text-indigo-300 text-xs font-extrabold font-mono pt-0.5">
             <span>ប្រមូលសរុបរួម:</span>
             <span className="text-yellow-400">{formatUSD(payload[0].payload.total)}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
+
+const BarChartTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-slate-900 border border-slate-950 p-3 rounded-xl shadow-lg font-sans text-xs space-y-1.5 text-white max-w-xs">
+        <p className="font-bold text-yellow-400 border-b border-slate-800 pb-1 flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-yellow-400"></span>
+          {label}
+        </p>
+        <div className="space-y-1.5 font-semibold text-[11px]">
+          <div className="flex justify-between gap-5 text-indigo-300">
+            <span>ដើមទុនបញ្ចេញ:</span>
+            <span className="font-mono text-indigo-200">{formatUSD(payload[0]?.value || 0)}</span>
+          </div>
+          <div className="flex justify-between gap-5 text-emerald-400">
+            <span>ទឹកប្រាក់ប្រមូលបាន:</span>
+            <span className="font-mono text-emerald-300">{formatUSD(payload[1]?.value || 0)}</span>
           </div>
         </div>
       </div>
@@ -383,6 +410,60 @@ export default function Dashboard({ customers, loans, transactions, onNavigate }
     const maxVal = Math.max(...values, 500); // at least 500 for scale
     return Math.ceil(maxVal * 1.15); // with some padding
   }, [chartData]);
+
+  // Recharts 12-Month Bar Chart calculation: Total Loan Principal disbursed vs. Total Paid Amount collected
+  const last12MonthsBarData = useMemo(() => {
+    const result = [];
+    const today = new Date();
+    
+    const monthNamesShortKh = [
+      'មករា', 'កុម្ភៈ', 'មីនា', 'មេសា', 'ឧសភា', 'មិថុនា',
+      'កក្កដា', 'សីហា', 'កញ្ញា', 'តុលា', 'វិច្ឆិកា', 'ធ្នូ'
+    ];
+
+    // Compute the 12 calendar months ending with the current month
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+      const year = d.getFullYear();
+      const month = d.getMonth(); // 0-11
+      const key = `${year}-${String(month + 1).padStart(2, '0')}`;
+      
+      result.push({
+        key,
+        name: `${monthNamesShortKh[month]} '${String(year).substring(2)}`,
+        totalPrincipalDisbursed: 0,
+        totalPaidAmount: 0,
+      });
+    }
+
+    // 1. Accumulate total disbursed principal
+    loans.forEach(loan => {
+      if (!loan.startDate) return;
+      const parts = loan.startDate.split('-');
+      if (parts.length >= 2) {
+        const key = `${parts[0]}-${parts[1]}`;
+        const monthBucket = result.find(r => r.key === key);
+        if (monthBucket) {
+          monthBucket.totalPrincipalDisbursed += loan.principal;
+        }
+      }
+    });
+
+    // 2. Accumulate total payments collected (transactions)
+    transactions.forEach(tx => {
+      if (!tx.date) return;
+      const parts = tx.date.split('-');
+      if (parts.length >= 2) {
+        const key = `${parts[0]}-${parts[1]}`;
+        const monthBucket = result.find(r => r.key === key);
+        if (monthBucket) {
+          monthBucket.totalPaidAmount += tx.totalAmount;
+        }
+      }
+    });
+
+    return result;
+  }, [loans, transactions]);
 
   // Simple statistics counters for visual flair
   const loanTypeCounts = useMemo(() => {
@@ -913,6 +994,68 @@ export default function Dashboard({ customers, loans, transactions, onNavigate }
                     activeDot={{ r: 6 }}
                   />
                 </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Card 3: Recharts 12-Month Principal vs. Paid Bar Chart */}
+          <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-6 space-y-4" id="recharts_12month_bar_chart_card">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="space-y-0.5">
+                <h3 className="font-semibold text-slate-900 text-sm flex items-center gap-2">
+                  <BarChart3 className="w-5 h-5 text-indigo-650" /> 
+                  របាយការណ៍ដើមទុនបញ្ចេញ និងប្រាក់ប្រមូលត្រឡប់ ១២ខែចុងក្រោយ (12-Month Principal vs. Payments)
+                </h3>
+                <p className="text-xs text-slate-500">
+                  ការប្រៀបធៀបទំហំដើមទុនដែលបានផ្តល់កម្ចីសរុប និងការប្រមូលត្រឡប់សរុប (ទាំងដើមនិងការ) ក្នុងរយៈពេល ១២ ខែចុងក្រោយ
+                </p>
+              </div>
+              <div className="flex gap-4 text-xs font-semibold self-start sm:self-center">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-3.5 h-3 bg-indigo-600 inline-block rounded-[3px]"></span>
+                  <span>ដើមទុនបញ្ចេញ (Disbursed)</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-3.5 h-3 bg-emerald-500 inline-block rounded-[3px]"></span>
+                  <span>ប្រមូលបាន (Collected)</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="w-full h-80 pt-4" style={{ minWidth: '100%', minHeight: '320px' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={last12MonthsBarData}
+                  margin={{ top: 10, right: 15, left: -10, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis 
+                    dataKey="name" 
+                    tick={{ fill: '#64748b', fontSize: 9, fontWeight: 600 }}
+                    axisLine={false}
+                    tickLine={false}
+                    dy={10}
+                  />
+                  <YAxis 
+                    tick={{ fill: '#64748b', fontSize: 10, fontWeight: 500 }}
+                    axisLine={false}
+                    tickLine={false}
+                    tickFormatter={(value) => `$${value.toLocaleString()}`}
+                  />
+                  <RechartsTooltip content={<BarChartTooltip />} />
+                  <Bar 
+                    name="ដើមទុនបញ្ចេញ"
+                    dataKey="totalPrincipalDisbursed" 
+                    fill="#4f46e5" 
+                    radius={[4, 4, 0, 0]}
+                  />
+                  <Bar 
+                    name="ទឹកប្រាក់ប្រមូលបាន"
+                    dataKey="totalPaidAmount" 
+                    fill="#10b981" 
+                    radius={[4, 4, 0, 0]}
+                  />
+                </BarChart>
               </ResponsiveContainer>
             </div>
           </div>
