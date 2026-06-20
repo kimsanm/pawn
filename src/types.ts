@@ -111,5 +111,7 @@ export interface PawnshopSettings {
   isTelegramEnabled: boolean;       // Turn on Telegram notifications
   telegramBotToken: string;         // Bot Token from BotFather
   telegramChatId: string;           // Chat target ID
+  // Automated Backups
+  isAutoBackupEnabled: boolean;     // Enable/disable automated daily backups
 }
 

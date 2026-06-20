@@ -21,7 +21,8 @@ import {
   MapPin,
   Lock,
   Send,
-  Bell
+  Bell,
+  Database
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { sendTelegramNotification } from '../utils/telegram';
@@ -386,6 +387,39 @@ export default function Settings({ settings, onSaveSettings, onResetSettings }: 
                   </div>
                 </motion.div>
               )}
+            </div>
+          </div>
+
+          {/* Section 5: Automated Daily Backups settings */}
+          <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-6 space-y-5" id="autobackup_settings_card">
+            <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2.5 pb-3 border-b border-slate-100">
+              <Database className="w-5 h-5 text-indigo-600" />
+              <span>ការរក្សាទុកទិន្នន័យស្វ័យប្រវត្ត (Automated Daily Backups)</span>
+            </h3>
+
+            <div className="space-y-4 text-xs text-slate-800 text-left">
+              <label className="flex items-start gap-3 p-3.5 bg-indigo-50/40 border border-indigo-100 rounded-xl cursor-pointer hover:bg-slate-100/60 transition-all select-none col-span-2">
+                <input 
+                  type="checkbox" 
+                  checked={formState.isAutoBackupEnabled}
+                  onChange={(e) => setFormState({ ...formState, isAutoBackupEnabled: e.target.checked })}
+                  className="mt-0.5 w-4 h-4 rounded-md border-indigo-300 text-indigo-600 focus:ring-indigo-500 accent-indigo-600"
+                />
+                <div className="space-y-0.5">
+                  <div className="font-bold text-slate-800 text-xs">បើកដំណើរការរក្សាទុកទិន្នន័យស្វ័យប្រវត្តរៀងរាល់ថ្ងៃ (Enable Automated Daily Backups)</div>
+                  <div className="text-[10px] text-slate-500 leading-relaxed">ប្រព័ន្ធនឹងបង្កើតឯកសារច្បាប់ចម្លងនៃមូលទិន្នន័យ (អតិថិជន កិច្ចសន្យា និងវិក្កយបត្រ) ក្នុងកម្មវិធីរុករករបស់អ្នកដោយស្វ័យប្រវត្តម្តងក្នុងមួយថ្ងៃ ដើម្បីការពារការបាត់បង់ទិន្នន័យដោយចៃដន្យ។</div>
+                </div>
+              </label>
+
+              <div className="p-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl flex items-start gap-2.5 leading-normal">
+                <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <span className="font-semibold block text-[10.5px]">ចំណាំសំខាន់បំផុត (Local Retention Notice)៖</span>
+                  <p className="text-[10px] text-slate-600">
+                    ច្បាប់ចម្លងត្រូវបានរក្សាទុកដោយប្រើសោ Timestamp ពិសេសនៅក្នុង Browser របស់ឧបករណ៍នេះ។ ទិន្នន័យនឹងមិនបាត់បង់ឡើយ ទោះបីជាបិទទំព័រក៏ដោយ ប៉ុន្តែការសម្អាតប្រវត្តិរុករក (Browsing Data/Cache reset) អាចពន្លត់ទិន្នន័យក្នុងឧបករណ៍នេះ។ សូមធ្វើការនាំចូល/នាំចេញជា JSON ទៅម៉ាស៊ីនផ្ទាល់ខ្លួនជាជំនួយបន្ថែម!
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </div>

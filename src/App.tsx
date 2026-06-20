@@ -52,8 +52,8 @@ import {
 const DEFAULT_SETTINGS: PawnshopSettings = {
   businessName: 'V4U Pawn Group',
   businessSlogan: 'ប្រព័ន្ធគ្រប់គ្រងហាងបញ្ចាំ កម្ចី និងរំលស់',
-  businessPhone: '012 345 678 / 098 765 432',
-  businessAddress: 'ផ្លូវលេខ ២៧១, សង្កាត់បឹងសាឡាង, ភ្នំពេញ',
+  businessPhone: '012/093 949145',
+  businessAddress: '២០០២ ខណ្ឌសែនសុខ, រាជធានីភ្នំពេញ',
   defaultInterestRate: 2.0,
   defaultPenaltyRate: 1.0,
   defaultAdminFee: 5.0,
@@ -65,6 +65,7 @@ const DEFAULT_SETTINGS: PawnshopSettings = {
   isTelegramEnabled: false,
   telegramBotToken: '',
   telegramChatId: '',
+  isAutoBackupEnabled: true,
 };
 
 export default function App() {
@@ -99,7 +100,15 @@ export default function App() {
     const localSettings = localStorage.getItem('pawnshop_settings');
 
     if (localSettings) {
-      setSettings(JSON.parse(localSettings));
+      const parsed = JSON.parse(localSettings);
+      if (parsed.businessPhone === '012 345 678 / 098 765 432') {
+        parsed.businessPhone = '012/093 949145';
+      }
+      if (parsed.businessAddress === 'ផ្លូវលេខ ២៧១, សង្កាត់បឹងសាឡាង, ភ្នំពេញ') {
+        parsed.businessAddress = '២០០២ ខណ្ឌសែនសុខ, រាជធានីភ្នំពេញ';
+      }
+      setSettings(parsed);
+      localStorage.setItem('pawnshop_settings', JSON.stringify(parsed));
     } else {
       localStorage.setItem('pawnshop_settings', JSON.stringify(DEFAULT_SETTINGS));
     }
@@ -130,6 +139,38 @@ export default function App() {
     setLoans(l);
     setTransactions(t);
   };
+
+  // Automated Daily Backup Engine
+  useEffect(() => {
+    // Only proceed if auto backup is enabled in configuration
+    if (settings.isAutoBackupEnabled === false) return;
+    
+    // To prevent empty baseline backups on cold-starts
+    if (customers.length === 0 && loans.length === 0 && transactions.length === 0) return;
+
+    // Get current YYYY-MM-DD date representation in local timezone
+    const d = new Date();
+    const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    
+    const lastBackupTracker = localStorage.getItem('pawnshop_last_auto_backup_date');
+
+    if (lastBackupTracker !== todayStr) {
+      const backupData = {
+        version: '1.0.0',
+        timestamp: new Date().toISOString(),
+        database: {
+          customers,
+          loans,
+          transactions
+        }
+      };
+      
+      // Save item using standard timestamped key prefix
+      localStorage.setItem(`pawnshop_backup_${todayStr}`, JSON.stringify(backupData));
+      localStorage.setItem('pawnshop_last_auto_backup_date', todayStr);
+      console.log(`[AutoBackup] State backed up successfully under key 'pawnshop_backup_${todayStr}'`);
+    }
+  }, [customers, loans, transactions, settings]);
 
   // Digital clock update tick
   useEffect(() => {

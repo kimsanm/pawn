@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Customer, Loan, Transaction } from '../types';
 import { Download, Upload, Trash2, Database, ShieldAlert, Sparkles, RefreshCcw } from 'lucide-react';
 
@@ -16,10 +16,108 @@ interface BackupRestoreProps {
   onResetAll: () => void;
 }
 
+interface AutoBackupItem {
+  key: string;
+  dateStr: string;
+  timestamp: string;
+  customerCount: number;
+  loanCount: number;
+  transactionCount: number;
+}
+
 export default function BackupRestore({ customers, loans, transactions, onImportData, onLoadSample, onResetAll }: BackupRestoreProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragActive, setDragActive] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [autoBackups, setAutoBackups] = useState<AutoBackupItem[]>([]);
+
+  const loadAutoBackups = () => {
+    const list: AutoBackupItem[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('pawnshop_backup_')) {
+        try {
+          const valStr = localStorage.getItem(key);
+          if (valStr) {
+            const parsed = JSON.parse(valStr);
+            const db = parsed.database || parsed;
+            if (db && db.customers && db.loans && db.transactions) {
+              const datePart = key.replace('pawnshop_backup_', '');
+              list.push({
+                key,
+                dateStr: datePart,
+                timestamp: parsed.timestamp || datePart,
+                customerCount: db.customers.length || 0,
+                loanCount: db.loans.length || 0,
+                transactionCount: db.transactions.length || 0
+              });
+            }
+          }
+        } catch (e) {
+          // ignore corrupted keys
+        }
+      }
+    }
+    setAutoBackups(list.sort((a, b) => b.dateStr.localeCompare(a.dateStr)));
+  };
+
+  useEffect(() => {
+    loadAutoBackups();
+  }, [customers, loans, transactions]);
+
+  const handleCreateManualBackup = () => {
+    const d = new Date();
+    const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const key = `pawnshop_backup_${todayStr}`;
+    
+    const backupData = {
+      version: '1.0.0',
+      timestamp: new Date().toISOString(),
+      database: {
+        customers,
+        loans,
+        transactions
+      }
+    };
+    
+    localStorage.setItem(key, JSON.stringify(backupData));
+    localStorage.setItem('pawnshop_last_auto_backup_date', todayStr);
+    setSuccessMessage(`បានបង្កើតច្បាប់ចម្លងសម្រាប់ថ្ងៃទី ${todayStr} ជោគជ័យ!`);
+    setTimeout(() => setSuccessMessage(null), 4000);
+    loadAutoBackups();
+  };
+
+  const handleRestoreAutoBackup = (item: AutoBackupItem) => {
+    if (confirm(`⚠️ តើអ្នកពិតជាចង់ស្តារទិន្នន័យពីថ្ងៃទី ${item.dateStr} ឡើងវិញមែនទេ? រាល់ទិន្នន័យបច្ចុប្បន្ននឹងត្រូវជាន់ពីលើ។`)) {
+      try {
+        const valStr = localStorage.getItem(item.key);
+        if (valStr) {
+          const parsed = JSON.parse(valStr);
+          const db = parsed.database || parsed;
+          if (db && db.customers && db.loans && db.transactions) {
+            onImportData({
+              customers: db.customers,
+              loans: db.loans,
+              transactions: db.transactions
+            });
+            setSuccessMessage(`បានស្តារទិន្នន័យពីថ្ងៃទី ${item.dateStr} ដោយជោគជ័យ!`);
+            setTimeout(() => setSuccessMessage(null), 4000);
+          }
+        }
+      } catch (e) {
+        alert('ការស្តារទិន្នន័យបរាជ័យ!');
+      }
+    }
+  };
+
+  const handleDeleteAutoBackup = (item: AutoBackupItem) => {
+    if (confirm(`តើអ្នកពិតជាចង់លុបច្បាប់ចម្លងថ្ងៃទី ${item.dateStr} នេះមែនទេ?`)) {
+      localStorage.removeItem(item.key);
+      setSuccessMessage('បានលុបច្បាប់ចម្លងជាជោគជ័យ!');
+      setTimeout(() => setSuccessMessage(null), 3000);
+      loadAutoBackups();
+    }
+  };
 
   // Export database as JSON download
   const handleExportDB = () => {
@@ -247,6 +345,84 @@ export default function BackupRestore({ customers, loans, transactions, onImport
         </div>
 
       </div>
+
+      {/* Section 3: Browser Backups Ledger */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs space-y-5" id="auto_backups_list_section">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-slate-100">
+          <div className="space-y-1 text-left">
+            <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
+              <Database className="w-5 h-5 text-indigo-500" />
+              <span>ច្បាប់ចម្លងប្រព័ន្ធស្វ័យប្រវត្តក្នុងឧបករណ៍ (Automated Browser Backups)</span>
+            </h3>
+            <p className="text-[11px] text-slate-500">
+              បញ្ជីច្បាប់ចម្លងទិន្នន័យដែលបានរក្សាទុកក្នុងម៉ាស៊ីននេះដោយប្រើសោ Timestamp ស្វ័យប្រវត្ត។
+            </p>
+          </div>
+          
+          <button
+            onClick={handleCreateManualBackup}
+            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-md active:scale-98 cursor-pointer shrink-0"
+          >
+            <Database className="w-4 h-4 text-indigo-300" />
+            <span>បង្កើតច្បាប់ចម្លងបច្ចុប្បន្ន (Backup Now)</span>
+          </button>
+        </div>
+
+        {autoBackups.length === 0 ? (
+          <div className="text-center py-10 px-4 bg-slate-50 rounded-xl border border-slate-100 space-y-2">
+            <Database className="w-8 h-8 text-slate-350 mx-auto" />
+            <p className="font-bold text-xs text-slate-500">មិនទាន់មានច្បាប់ចម្លងស្វ័យប្រវត្តនៅឡើយទេ! (No backups recorded)</p>
+            <p className="text-[10px] text-slate-400">ប្រព័ន្ធនឹងរក្សាទុកច្បាប់ចម្លងរៀងរាល់ថ្ងៃនៅពេលមានការប្រើប្រាស់ ឬពេលអ្នកចុចរក្សាទុកខាងលើ។</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-150 text-slate-500 font-bold">
+                  <th className="py-3 px-4 font-bold text-left">កាលបរិច្ឆេទចម្លង (Backup Date)</th>
+                  <th className="py-3 px-4 font-bold text-center">អតិថិជន (Clients)</th>
+                  <th className="py-3 px-4 font-bold text-center">កិច្ចសន្យា (Contracts)</th>
+                  <th className="py-3 px-4 font-bold text-center">វិក្កយបត្រ (Invoices)</th>
+                  <th className="py-3 px-4 font-bold text-right">សកម្មភាព (Actions)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 font-semibold text-slate-700">
+                {autoBackups.map((item) => (
+                  <tr key={item.key} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="py-3.5 px-4 text-left">
+                      <div className="font-bold text-slate-900 font-mono">{item.dateStr}</div>
+                      <div className="text-[10px] text-slate-400 mt-0.5 font-light">
+                        {new Date(item.timestamp).toLocaleTimeString('kh-KH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 text-center font-mono font-bold text-slate-900">{item.customerCount} នាក់</td>
+                    <td className="py-3.5 px-4 text-center font-mono font-bold text-slate-900">{item.loanCount} ក្បាល</td>
+                    <td className="py-3.5 px-4 text-center font-mono font-bold text-slate-900">{item.transactionCount} ច្បាប់</td>
+                    <td className="py-3.5 px-4 text-right">
+                      <div className="flex items-center justify-end gap-2.5 text-right w-full">
+                        <button
+                          onClick={() => handleRestoreAutoBackup(item)}
+                          className="px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-100 hover:bg-indigo-100 transition-all font-bold text-[11px] active:scale-97 cursor-pointer"
+                        >
+                          ស្តារឡើងវិញ (Restore)
+                        </button>
+                        <button
+                          onClick={() => handleDeleteAutoBackup(item)}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-slate-100/50 transition-all cursor-pointer"
+                          title="លុបច្បាប់ចម្លងនេះ"
+                        >
+                          <Trash2 className="w-4 h-4 text-slate-400 hover:text-red-500" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
     </div>
   );
 }
