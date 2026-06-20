@@ -167,6 +167,54 @@ export default function Dashboard({ customers, loans, transactions, onNavigate }
     };
   }, [loans, transactions]);
 
+  // Real-time financial metrics calculation (Total Active Capital, Monthly Interest Expected, Overdue Loan Count)
+  const realTimeMetrics = useMemo(() => {
+    let totalActiveCapital = 0;
+    let monthlyInterestExpected = 0;
+    let overdueLoanCount = 0;
+    
+    const todayStr = new Date().toISOString().split('T')[0];
+    const currentMonthPrefix = new Date().toISOString().substring(0, 7); // e.g. "2026-06"
+
+    loans.forEach(loan => {
+      // 1. Total Active Capital: outstanding principal of active/overdue contracts
+      if (loan.status === LoanStatus.ACTIVE || loan.status === LoanStatus.OVERDUE) {
+        let paidPrincipal = 0;
+        loan.schedules.forEach(sched => {
+          if (sched.status === 'PAID') {
+            paidPrincipal += sched.principal;
+          }
+        });
+        totalActiveCapital += Math.max(0, loan.principal - paidPrincipal);
+      }
+
+      // 2. Monthly Interest Expected: sum of schedule interest falling due within the current calendar month
+      if (loan.status === LoanStatus.ACTIVE || loan.status === LoanStatus.OVERDUE) {
+        loan.schedules.forEach(sched => {
+          if (sched.dueDate.startsWith(currentMonthPrefix)) {
+            monthlyInterestExpected += sched.interest;
+          }
+        });
+      }
+
+      // 3. Overdue Loan Count: unique contracts with status OVERDUE or having at least one overdue payment schedule
+      if (loan.status === LoanStatus.OVERDUE) {
+        overdueLoanCount++;
+      } else if (loan.status === LoanStatus.ACTIVE) {
+        const hasOverdue = loan.schedules.some(s => s.status !== 'PAID' && s.dueDate < todayStr);
+        if (hasOverdue) {
+          overdueLoanCount++;
+        }
+      }
+    });
+
+    return {
+      totalActiveCapital,
+      monthlyInterestExpected,
+      overdueLoanCount
+    };
+  }, [loans]);
+
   // 1b. Due Today installments
   const dueTodayPayments = useMemo(() => {
     const list: Array<{
@@ -376,6 +424,91 @@ export default function Dashboard({ customers, loans, transactions, onNavigate }
           </button>
         </div>
       </div>
+
+      {/* Real-time Financial Metrics Summary Cards Section */}
+      <div className="space-y-3.5" id="realtime_financial_summary_section">
+        <div className="flex items-center gap-2 text-slate-900">
+          <Coins className="w-5 h-5 text-indigo-650" />
+          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 font-sans">
+            របាយការណ៍សង្ខេបហិរញ្ញវត្ថុជាក់ស្តែង (Real-time Financial Summary)
+          </h4>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Card 1: Total Active Capital */}
+          <div 
+            className="bg-white rounded-2xl border border-slate-200/95 shadow-xs p-6 flex items-center justify-between hover:shadow-sm hover:border-indigo-100 transition-all group duration-300"
+            id="card_total_active_capital"
+          >
+            <div className="space-y-1.5 text-left">
+              <span className="text-slate-500 text-xs font-bold block uppercase tracking-wide">
+                ដើមទុនសកម្មសរុប (Total Active Capital)
+              </span>
+              <div className="text-3xl font-black text-indigo-600 font-mono tracking-tight group-hover:scale-[1.01] transition-transform">
+                {formatUSD(realTimeMetrics.totalActiveCapital)}
+                <span className="block text-[10.5px] font-bold text-slate-400 mt-1 font-mono">
+                  ≈ {formatKHR(realTimeMetrics.totalActiveCapital * EXCHANGE_RATE_USD_TO_KHR)}
+                </span>
+              </div>
+              <p className="text-[10px] text-slate-450 leading-relaxed font-semibold">
+                ដើមទុនបច្ចុប្បន្នដែលបញ្ចេញនៅលើទីផ្សារកិច្ចសន្យា
+              </p>
+            </div>
+            <div className="w-13 h-13 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center border border-indigo-100/50 group-hover:scale-110 transition-transform duration-300">
+              <Briefcase className="w-6 h-6" />
+            </div>
+          </div>
+
+          {/* Card 2: Monthly Interest Expected */}
+          <div 
+            className="bg-white rounded-2xl border border-slate-200/95 shadow-xs p-6 flex items-center justify-between hover:shadow-sm hover:border-emerald-100 transition-all group duration-300"
+            id="card_monthly_interest_expected"
+          >
+            <div className="space-y-1.5 text-left">
+              <span className="text-slate-500 text-xs font-bold block uppercase tracking-wide">
+                ការប្រាក់រំពឹងទុកខែនេះ (Monthly Interest Expected)
+              </span>
+              <div className="text-3xl font-black text-emerald-600 font-mono tracking-tight group-hover:scale-[1.01] transition-transform">
+                {formatUSD(realTimeMetrics.monthlyInterestExpected)}
+                <span className="block text-[10.5px] font-bold text-slate-400 mt-1 font-mono">
+                  ≈ {formatKHR(realTimeMetrics.monthlyInterestExpected * EXCHANGE_RATE_USD_TO_KHR)}
+                </span>
+              </div>
+              <p className="text-[10px] text-slate-450 leading-relaxed font-semibold">
+                ផលលាភការប្រាក់បូកសរុបត្រូវប្រមូលក្នុងខែនេះ
+              </p>
+            </div>
+            <div className="w-13 h-13 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100/50 group-hover:scale-110 transition-transform duration-300">
+              <TrendingUp className="w-6 h-6" />
+            </div>
+          </div>
+
+          {/* Card 3: Overdue Loan Count */}
+          <div 
+            className="bg-white rounded-2xl border border-slate-200/95 shadow-xs p-6 flex items-center justify-between hover:shadow-sm hover:border-red-105 transition-all group duration-300"
+            id="card_overdue_loan_count"
+          >
+            <div className="space-y-1.5 text-left">
+              <span className="text-slate-500 text-xs font-bold block uppercase tracking-wide">
+                ចំនួនកិច្ចសន្យាហួសកំណត់ (Overdue Loan Count)
+              </span>
+              <div className={`text-3xl font-black font-mono tracking-tight group-hover:scale-[1.01] transition-transform ${realTimeMetrics.overdueLoanCount > 0 ? 'text-red-500' : 'text-slate-900'}`}>
+                {realTimeMetrics.overdueLoanCount}
+                <span className="block text-[10.5px] font-bold text-slate-400 mt-1">
+                  កុងត្រា (Overdue Contracts)
+                </span>
+              </div>
+              <p className="text-[10px] text-slate-450 leading-relaxed font-semibold">
+                {realTimeMetrics.overdueLoanCount > 0 ? 'ត្រូវការតាមដាន និងទាក់ទងដោះស្រាយជាបន្ទាន់' : 'ពុំមានកិច្ចសន្យាណាយឺតយ៉ាវហួសកាលកំណត់ឡើយ'}
+              </p>
+            </div>
+            <div className={`w-13 h-13 rounded-2xl flex items-center justify-center border transition-all duration-300 group-hover:scale-110 ${realTimeMetrics.overdueLoanCount > 0 ? 'bg-red-50 border-red-100/50 text-red-500' : 'bg-slate-50 border-slate-100 text-slate-450'}`}>
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Key Performance Indicators (KPI) Row */}
       <div className="space-y-3" id="kpi_metrics_section">
         <div className="flex items-center gap-2 text-slate-900">
