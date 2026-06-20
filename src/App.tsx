@@ -26,6 +26,7 @@ import BackupRestore from './components/BackupRestore';
 import Settings from './components/Settings';
 import LoginScreen from './components/LoginScreen';
 import QuickCalculator from './components/QuickCalculator';
+import LoanCalendar from './components/LoanCalendar';
 
 // Lucide Icons
 import { 
@@ -44,7 +45,8 @@ import {
   Search,
   Settings as SettingsIcon,
   LogOut,
-  Calculator
+  Calculator,
+  CalendarDays
 } from 'lucide-react';
 
 const DEFAULT_SETTINGS: PawnshopSettings = {
@@ -145,7 +147,8 @@ export default function App() {
     
     if (tab === 'loans') {
       // If navigating to detail tab with a specific contract ID
-      setSelectedLoanId(arg || null);
+      const targetId = typeof arg === 'string' ? arg : (arg?.loanId || null);
+      setSelectedLoanId(targetId);
     } else if (tab === 'loans_new') {
       // If initiating loan for specific pre-selected client
       setTargetCustomerIdForNewLoan(arg?.customerId || undefined);
@@ -328,6 +331,7 @@ export default function App() {
             { id: 'dashboard', label: 'ផ្ទាំងគ្រប់គ្រងទូទៅ', desc: 'Dashboard Overview', icon: LayoutDashboard },
             { id: 'customers', label: 'គ្រប់គ្រងអតិថិជន', desc: 'Customers Directory', icon: Users },
             { id: 'loans', label: 'បញ្ជីកិច្ចសន្យា/បង់ប្រាក់', desc: 'Contracts & Collections', icon: FileText },
+            { id: 'calendar', label: 'ប្រតិទិនបង់ប្រាក់ឥណទាន', desc: 'Loan Calendar View', icon: CalendarDays },
             { id: 'loans_new', label: 'បង្កើតកិច្ចសន្យាថ្មី', desc: 'Create New Contract', icon: PlusCircle },
             { id: 'transactions', label: 'ប្រវត្តិវិក្កយបត្រទទួលប្រាក់', desc: 'Payment Transactions', icon: History },
             { id: 'backup', label: 'របាយការណ៍ និងទិន្នន័យ', desc: 'Database & Backups', icon: Database },
@@ -486,6 +490,15 @@ export default function App() {
               onAddTransaction={handleAddTransactionUpdateLoan} 
               globalSearchQuery={globalSearchQuery}
               setGlobalSearchQuery={setGlobalSearchQuery}
+            />
+          )}
+
+          {activeTab === 'calendar' && (
+            <LoanCalendar 
+              loans={loans} 
+              customers={customers} 
+              onNavigate={handleNavigate} 
+              accentColor={settings.accentColor}
             />
           )}
 
